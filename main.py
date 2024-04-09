@@ -7,7 +7,7 @@ import requests
 
 
 
-from models import Course, Discussion
+from models import Course, Discussion, DiscussionEntry, Submission
 
 load_dotenv()
 
@@ -48,3 +48,39 @@ async def get_discussions(course_id: int) -> list:
     response_json = response.json()
     return [Discussion(**discussion) for discussion in response_json]
 
+@app.post("/discussions/entries")
+async def create_discussion_entry(course_id: int, topic_id: int, data: DiscussionEntry) -> None:
+    response = requests.post(f"{base_url}/courses/{course_id}/discussion_topics/{topic_id}/entries", data=data.model_dump(), headers=headers)
+    r_json = response.json()
+    return
+
+@app.get("/discussions/entries")
+async def get_discussion_entries(course_id: int, topic_id: int, per_page: int):
+    response = requests.get(f"{base_url}/courses/{course_id}/discussion_topics/{topic_id}/entries?per_page={per_page}", headers=headers)
+    r_json = response.json()
+    return r_json
+
+@app.put("/discussion/entries")
+async def update_discussion_entrie(course_id: int, topic_id: int, entry_id: int, data: DiscussionEntry) -> None:
+    response = requests.put(f"{base_url}/courses/{course_id}/discussion_topics/{topic_id}/entries/{entry_id}", headers=headers, data=data.model_dump())
+    r_json = response.json()
+    return
+
+
+@app.get("/courses/{course_id}/assignments")
+async def get_course_assignments(course_id: int, per_page: int = 10, assignment_name: str = "") -> list | dict:
+    response = requests.get(f"{base_url}/courses/{course_id}/assignments?per_page={per_page}", headers=headers)
+    r_json = response.json()
+    if assignment_name == "":
+        return [assignment["name"] for assignment in r_json]
+    try:
+        assignment = [assignment for assignment in r_json if assignment["name"] == assignment_name][0]
+    except KeyError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Assignment {assignment_name} not found.")
+    return assignment
+
+@app.post("/courses/{course_id}") 
+async def post_course_assignment(course_id: int, assignment_id: int, submission: Submission):
+    body =  {"comment[text_comment]": submission.comment, "submission[submission_type]": submission.type, "submission[url]": submission.url}
+    response = requests.post(f"{base_url}/courses/{course_id}/assignments/{assignment_id}/submissions", headers=headers)
+    return response.json()
