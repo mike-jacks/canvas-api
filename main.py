@@ -72,15 +72,15 @@ async def get_course_assignments(course_id: int, per_page: int = 10, assignment_
     response = requests.get(f"{base_url}/courses/{course_id}/assignments?per_page={per_page}", headers=headers)
     r_json = response.json()
     if assignment_name == "":
-        return [assignment["name"] for assignment in r_json]
+        return [{"assignment_id":assignment["id"], "name":assignment["name"]} for assignment in r_json]
     try:
         assignment = [assignment for assignment in r_json if assignment["name"] == assignment_name][0]
     except KeyError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Assignment {assignment_name} not found.")
     return assignment
 
-@app.post("/courses/{course_id}") 
+@app.post("/courses/{course_id}/assignments/{assignment_id}/submit") 
 async def post_course_assignment(course_id: int, assignment_id: int, submission: Submission):
-    body =  {"comment[text_comment]": submission.comment, "submission[submission_type]": submission.type, "submission[url]": submission.url}
-    response = requests.post(f"{base_url}/courses/{course_id}/assignments/{assignment_id}/submissions", headers=headers)
+    data =  {"comment[text_comment]": submission.comment, "submission[submission_type]": submission.type, "submission[url]": submission.url}
+    response = requests.post(f"{base_url}/courses/{course_id}/assignments/{assignment_id}/submissions", headers=headers, data=data)
     return response.json()
